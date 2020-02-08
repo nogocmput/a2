@@ -51,8 +51,8 @@ class GtpConnection():
             "gogui-rules_side_to_move": self.gogui_rules_side_to_move_cmd,
             "gogui-rules_board": self.gogui_rules_board_cmd,
             "gogui-rules_final_result": self.gogui_rules_final_result_cmd,
-            "gogui-analyze_commands": self.gogui_analyze_cmd
-            "timelimit": self.timelimit
+            "gogui-analyze_commands": self.gogui_analyze_cmd,
+            "timelimit": self.timelimit,
             "solve": self.solve
 
         }
@@ -229,11 +229,80 @@ class GtpConnection():
         which attempts to compute the winner of the current position, 
         assuming perfect play by both, within the current time limit.
         """
-        signal.signal(signal.SIGALRM, handler)
-        signal.alarm(self._timelimit)
-        try:
-            self._timelimit
-        except Exception
+        # signal.signal(signal.SIGALRM, handler)
+        # signal.alarm(self._timelimit)
+        # # try:
+        # #     self._timelimit
+        # # except Exception
+
+        
+        color = self.board.current_player
+    
+        moves = GoBoardUtil.generate_legal_moves(self.board, color)
+
+        tempboard = self.board.copy()
+       
+        for move in moves:
+
+            tempboard.play_move(move,color)
+            
+            if self.minimax(tempboard,color) == color:
+                self.respond("win")
+                print(move)
+                return 
+           
+            tempboard.current_player = color
+            tempboard.board[move] = EMPTY
+         
+           
+            
+        self.respond("lose")
+
+            
+
+
+    def minimax(self,Tboard,player):
+
+        current_player = Tboard.current_player
+        
+        moves = GoBoardUtil.generate_legal_moves(Tboard, current_player)
+        
+
+        # current player looses
+        if len(moves) ==0:
+            self.respond(str(GoBoardUtil.get_twoD_board(Tboard)))
+            self.respond(3-current_player)
+            return 3-current_player
+
+        if player == current_player:
+            
+            for move in moves:
+                Tboard.play_move(move,current_player)
+                if self.minimax(Tboard,player) == player:
+                    Tboard.board[move] = EMPTY
+                    Tboard.current_player = player
+                    return player
+                
+                Tboard.board[move] = EMPTY
+                Tboard.current_player = player
+
+            return 3-player
+        else:
+            
+            for move in moves:
+                Tboard.play_move(move,current_player)
+                if self.minimax(Tboard,player) != player:
+                    Tboard.board[move] = EMPTY
+                    Tboard.current_player = player
+                  
+                    return 3-player
+                
+                Tboard.board[move] = EMPTY
+                Tboard.current_player = player
+            
+            return player
+
+        
 
 
     def play_cmd(self, args):
