@@ -111,6 +111,18 @@ class GoBoardUtil(object):
                 legal_moves.append(move)
         return legal_moves
 
+
+    def gen1_move(board,color,moves):
+        allmoves = []
+        for move in moves:
+            if not board.is_capture(move,color):
+                allmoves.append(move)
+        #if own lib
+        if len(allmoves) != 0:
+            return allmoves
+        else:
+            return PASS
+
     @staticmethod       
     def generate_random_move(board, color, use_eye_filter):
         """

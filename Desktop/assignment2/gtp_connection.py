@@ -31,6 +31,7 @@ class GtpConnection():
         self.go_engine = go_engine
         self.board = board
         self._timelimit = 1
+        self._toPlay = 2 # black play first as defalut
         self.commands = {
             "protocol_version": self.protocol_version_cmd,
             "quit": self.quit_cmd,
@@ -224,6 +225,10 @@ class GtpConnection():
         self._timelimit = int(args[0])
         self.respond()
         return
+
+    def handler(signum, frame):
+        raise TimeoutError
+
     def solve(self, args, genmove = False):
         """
         which attempts to compute the winner of the current position, 
@@ -231,10 +236,48 @@ class GtpConnection():
         """
         signal.signal(signal.SIGALRM, handler)
         signal.alarm(self._timelimit)
+        final_result = "unknow"
         try:
-            self._timelimit
-        except Exception
+            color = self.board.current_player
+            move =  GoBoardUtil.generate_legal_moves(self.board, color)
+            moves = GoBoardUtil.gen1_move(self.board, color, move)
+            if moves != None:
+                final_result = "unknow"
+            """
+            if self.board.current_player == 1:
+                final_result = "white"
+            else:
+                final_result = "black"
+            """
 
+            if  final_result != "unknow":
+                self.respond("winner ["+move+"]")
+            else:
+                if genmove:
+                    signal.alarm(0)
+                    return move
+                if self.board.current_player == 1:
+                    self.respond("w "+move)
+                else:
+                    self.respond("b "+move)
+ 
+            """
+            it was white's turn but white loses, so we do not write a move, just write "b" (b wins)
+            call it "one_step_to_win"
+            """
+            if one_step_to_win:
+                if self.board.current_player == 1:
+                    self.respond("w")
+                else:
+                    self.respond("b")
+
+        except TimeoutError:
+            if genmove:
+                return
+            self.respond("unknown")
+
+        signal.alarm(0)
+        return
 
     def play_cmd(self, args):
         """
