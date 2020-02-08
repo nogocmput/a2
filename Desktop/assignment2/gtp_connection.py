@@ -226,7 +226,7 @@ class GtpConnection():
         self.respond()
         return
 
-    def handler(signum, frame):
+    def handler(self,signum, frame):
         raise TimeoutError
 
     def solve(self, args, genmove = False):
@@ -234,33 +234,36 @@ class GtpConnection():
         which attempts to compute the winner of the current position, 
         assuming perfect play by both, within the current time limit.
         """
-        signal.signal(signal.SIGALRM, handler)
+        signal.signal(signal.SIGALRM, self.handler)
         signal.alarm(self._timelimit)
+        
         try:
             color = self.board.current_player
-            move =  GoBoardUtil.generate_legal_moves(self.board, color)
-            moves = GoBoardUtil.gen1_move(self.board, color, move)
-            if moves == None::
-                self.respond("winner ["+move+"]")
-            elif not one_step_to_win:
-                signal.alarm(0)
-                if self.board.current_player == 1:
-                    self.respond("w "+move)
-                else:
-                    self.respond("b "+move)
-                return move
+            moves = GoBoardUtil.generate_legal_moves(self.board, color)
+            tempboard = self.board.copy()
+            for move in moves:
+                tempboard.play_move(move,color)
+                if self.minimax(tempboard,color) == color:
+                    self.respond("win")
+                    print("winning move", move)
+                    signal.alarm(0)
+                    return 
+                tempboard.current_player = color
+                tempboard.board[move] = EMPTY
+            self.respond("lose")
             """
             it was white's turn but white loses, so we do not write a move, just write "b" (b wins)
             call it "one_step_to_win"
             """
-            else:
-                if self.board.current_player == 1:
-                    self.respond("w")
-                else:
-                    self.respond("b")
+            # else:
+            #     if self.board.current_player == 1:
+            #         self.respond("w")
+            #     else:
+            #         self.respond("b")
 
         except TimeoutError:
             self.respond("unknown")
+            signal.alarm(0)
             return
 
         signal.alarm(0)
@@ -268,21 +271,8 @@ class GtpConnection():
 
         
 
-'''        
-        color = self.board.current_player
-        moves = GoBoardUtil.generate_legal_moves(self.board, color)
-        tempboard = self.board.copy()
-        for move in moves:
-            tempboard.play_move(move,color)
-            if self.minimax(tempboard,color) == color:
-                self.respond("win")
-                print(move)
-                return 
-            tempboard.current_player = color
-            tempboard.board[move] = EMPTY
-        self.respond("lose")
-'''
-            
+
+
 
 
     def minimax(self,Tboard,player):
