@@ -52,8 +52,8 @@ class GtpConnection():
             "gogui-rules_side_to_move": self.gogui_rules_side_to_move_cmd,
             "gogui-rules_board": self.gogui_rules_board_cmd,
             "gogui-rules_final_result": self.gogui_rules_final_result_cmd,
-            "gogui-analyze_commands": self.gogui_analyze_cmd
-            "timelimit": self.timelimit
+            "gogui-analyze_commands": self.gogui_analyze_cmd,
+            "timelimit": self.timelimit,
             "solve": self.solve
 
         }
@@ -236,48 +236,99 @@ class GtpConnection():
         """
         signal.signal(signal.SIGALRM, handler)
         signal.alarm(self._timelimit)
-        final_result = "unknow"
         try:
             color = self.board.current_player
             move =  GoBoardUtil.generate_legal_moves(self.board, color)
             moves = GoBoardUtil.gen1_move(self.board, color, move)
-            if moves != None:
-                final_result = "unknow"
-            """
-            if self.board.current_player == 1:
-                final_result = "white"
-            else:
-                final_result = "black"
-            """
-
-            if  final_result != "unknow":
+            if moves == None::
                 self.respond("winner ["+move+"]")
-            else:
-                if genmove:
-                    signal.alarm(0)
-                    return move
+            elif not one_step_to_win:
+                signal.alarm(0)
                 if self.board.current_player == 1:
                     self.respond("w "+move)
                 else:
                     self.respond("b "+move)
- 
+                return move
             """
             it was white's turn but white loses, so we do not write a move, just write "b" (b wins)
             call it "one_step_to_win"
             """
-            if one_step_to_win:
+            else:
                 if self.board.current_player == 1:
                     self.respond("w")
                 else:
                     self.respond("b")
 
         except TimeoutError:
-            if genmove:
-                return
             self.respond("unknown")
+            return
 
         signal.alarm(0)
         return
+
+        
+
+'''        
+        color = self.board.current_player
+        moves = GoBoardUtil.generate_legal_moves(self.board, color)
+        tempboard = self.board.copy()
+        for move in moves:
+            tempboard.play_move(move,color)
+            if self.minimax(tempboard,color) == color:
+                self.respond("win")
+                print(move)
+                return 
+            tempboard.current_player = color
+            tempboard.board[move] = EMPTY
+        self.respond("lose")
+'''
+            
+
+
+    def minimax(self,Tboard,player):
+
+        current_player = Tboard.current_player
+        
+        moves = GoBoardUtil.generate_legal_moves(Tboard, current_player)
+        
+
+        # current player looses
+        if len(moves) ==0:
+            
+            return 3-current_player
+
+        if player == current_player:
+            
+            for move in moves:
+                Tboard.play_move(move,current_player)
+                if self.minimax(Tboard,player) == player:
+                    Tboard.board[move] = EMPTY
+                    Tboard.current_player = player
+                    return player
+                
+                Tboard.board[move] = EMPTY
+                Tboard.current_player = player
+
+            return 3-player
+        else:
+            
+            for move in moves:
+                Tboard.play_move(move,current_player)
+                if self.minimax(Tboard,player) != player:
+                    Tboard.board[move] = EMPTY
+                    Tboard.current_player = player
+                  
+                    return 3-player
+                
+                Tboard.board[move] = EMPTY
+                Tboard.current_player = player
+            
+            return player
+
+        
+
+
+
 
     def play_cmd(self, args):
         """
