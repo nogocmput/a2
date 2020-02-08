@@ -229,33 +229,20 @@ class GtpConnection():
         which attempts to compute the winner of the current position, 
         assuming perfect play by both, within the current time limit.
         """
-        # signal.signal(signal.SIGALRM, handler)
-        # signal.alarm(self._timelimit)
-        # # try:
-        # #     self._timelimit
-        # # except Exception
+        
 
         
         color = self.board.current_player
-    
         moves = GoBoardUtil.generate_legal_moves(self.board, color)
-
         tempboard = self.board.copy()
-       
         for move in moves:
-
             tempboard.play_move(move,color)
-            
             if self.minimax(tempboard,color) == color:
                 self.respond("win")
                 print(move)
                 return 
-           
             tempboard.current_player = color
             tempboard.board[move] = EMPTY
-         
-           
-            
         self.respond("lose")
 
             
@@ -270,8 +257,7 @@ class GtpConnection():
 
         # current player looses
         if len(moves) ==0:
-            self.respond(str(GoBoardUtil.get_twoD_board(Tboard)))
-            self.respond(3-current_player)
+            
             return 3-current_player
 
         if player == current_player:
