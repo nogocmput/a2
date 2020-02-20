@@ -26,15 +26,50 @@ class SimpleGoBoard(object):
         """
         Check whether it is legal for color to play on point
         """
-        board_copy = self.copy()
-        # Try to play the move on a temporary copy of board
-        # This prevents the board from being messed up by the move
-        try:
-            legal = board_copy.play_move(point, color)
-        except:
+
+        
+
+        opp_color = GoBoardUtil.opponent(color)
+        if self._is_surrounded(point, opp_color):
             return False
+        self.board[point] = color
+
+        
+        block = self._block_of(point)
+        if not self._has_liberty(block): # undo suicide move
+            self.board[point] = EMPTY
+            return False
+
+        neighbors = self.neighbors[point]
+
+        #check capture
+        for nb in neighbors:
+            if self.board[nb] == opp_color:
+                block = self._block_of(nb)
+                if not self._has_liberty(block):
+
+                    self.board[point] = EMPTY
+                    
+                    return False
+
+        self.board[point] = EMPTY
+
+        
+        return True
+
+
+        
+
+
+        # board_copy = self.copy()
+        # # Try to play the move on a temporary copy of board
+        # # This prevents the board from being messed up by the move
+        # try:
+        #     legal = board_copy.play_move(point, color)
+        # except:
+        #     return False
             
-        return legal
+        # return legal
 
     def _detect_captures(self, point, opp_color):
         """
@@ -246,6 +281,9 @@ class SimpleGoBoard(object):
         # General case: deal with captures, suicide, and next ko point
         opp_color = GoBoardUtil.opponent(color)
         in_enemy_eye = self._is_surrounded(point, opp_color)
+        if in_enemy_eye:
+            raise ValueError("suicide")
+
         self.board[point] = color
         single_captures = []
         neighbors = self.neighbors[point]
@@ -254,6 +292,7 @@ class SimpleGoBoard(object):
                 single_capture = self._detect_and_process_capture(nb)
                 if single_capture == True:
                     raise ValueError("capture")
+                    
         if not self._stone_has_liberty(point):
             # check suicide of whole block
             block = self._block_of(point)
@@ -261,8 +300,8 @@ class SimpleGoBoard(object):
                 self.board[point] = EMPTY
                 raise ValueError("suicide")
         self.ko_recapture = None
-        if in_enemy_eye and len(single_captures) == 1:
-            self.ko_recapture = single_captures[0]
+        # if in_enemy_eye and len(single_captures) == 1:
+        #     self.ko_recapture = single_captures[0]
         self.current_player = GoBoardUtil.opponent(color)
         return True
 

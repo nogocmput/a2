@@ -229,7 +229,7 @@ class GtpConnection():
     def handler(self,signum, frame):
         raise TimeoutError
 
-    def solve(self, args, genmove = False):
+    def solve(self, return_val=False):
         """
         which attempts to compute the winner of the current position, 
         assuming perfect play by both, within the current time limit.
@@ -238,19 +238,29 @@ class GtpConnection():
         signal.alarm(self._timelimit)
         
         try:
+
             color = self.board.current_player
             moves = GoBoardUtil.generate_legal_moves(self.board, color)
             tempboard = self.board.copy()
             for move in moves:
                 tempboard.play_move(move,color)
                 if self.minimax(tempboard,color) == color:
-                    self.respond("win")
-                    print("winning move", move)
+                    move_coord = point_to_coord(move, self.board.size)
+                    move_as_string = format_point(move_coord)
                     signal.alarm(0)
+                    if return_val ==True:
+                        return (move)
+                    print(self.board.current_player, move_as_string)
+                    
+
                     return 
                 tempboard.current_player = color
                 tempboard.board[move] = EMPTY
-            self.respond("lose")
+            signal.alarm(0)
+            if return_val == True:
+                return []
+            self.respond(GoBoardUtil.opponent(self.board.current_player))
+            
             """
             it was white's turn but white loses, so we do not write a move, just write "b" (b wins)
             call it "one_step_to_win"
@@ -272,53 +282,33 @@ class GtpConnection():
         
 
 
-
-
-
     def minimax(self,Tboard,player):
-
         current_player = Tboard.current_player
-        
         moves = GoBoardUtil.generate_legal_moves(Tboard, current_player)
-        
-
         # current player looses
-        if len(moves) ==0:
-            
+        if len(moves) ==0: 
             return 3-current_player
-
         if player == current_player:
-            
             for move in moves:
+                
                 Tboard.play_move(move,current_player)
                 if self.minimax(Tboard,player) == player:
                     Tboard.board[move] = EMPTY
                     Tboard.current_player = player
                     return player
-                
                 Tboard.board[move] = EMPTY
                 Tboard.current_player = player
-
             return 3-player
         else:
-            
             for move in moves:
                 Tboard.play_move(move,current_player)
                 if self.minimax(Tboard,player) != player:
                     Tboard.board[move] = EMPTY
                     Tboard.current_player = player
-                  
                     return 3-player
-                
                 Tboard.board[move] = EMPTY
                 Tboard.current_player = player
-            
             return player
-
-        
-
-
-
 
     def play_cmd(self, args):
         """
@@ -360,6 +350,14 @@ class GtpConnection():
         move = self.go_engine.get_move(self.board, color)
         move_coord = point_to_coord(move, self.board.size)
         move_as_string = format_point(move_coord)
+
+        ans=self.solve(True)
+
+        if ans != []:
+            self.board.play_move(move, color)
+            self.respond(move_as_string)
+            return
+
         if self.board.is_legal(move, color):
             self.board.play_move(move, color)
             self.respond(move_as_string)
