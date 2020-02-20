@@ -291,7 +291,8 @@ class GtpConnection():
         if player == current_player:
             for move in moves:
                 
-                Tboard.play_move(move,current_player)
+                Tboard.board[move] = current_player
+                Tboard.current_player = 3 - current_player
                 if self.minimax(Tboard,player) == player:
                     Tboard.board[move] = EMPTY
                     Tboard.current_player = player
@@ -301,7 +302,11 @@ class GtpConnection():
             return 3-player
         else:
             for move in moves:
-                Tboard.play_move(move,current_player)
+
+                Tboard.board[move] = current_player
+                Tboard.current_player = 3 - current_player
+                
+                # Tboard.play_move(move,current_player)
                 if self.minimax(Tboard,player) != player:
                     Tboard.board[move] = EMPTY
                     Tboard.current_player = player
