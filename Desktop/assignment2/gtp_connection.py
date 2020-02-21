@@ -5,7 +5,9 @@ Module for playing games of Go using GoTextProtocol
 Parts of this code were originally based on the gtp module 
 in the Deep-Go project by Isaac Henrion and Amos Storkey 
 at the University of Edinburgh.
+
 """
+
 import traceback
 from sys import stdin, stdout, stderr
 from board_util import GoBoardUtil, BLACK, WHITE, EMPTY, BORDER, PASS, \
@@ -17,6 +19,10 @@ import signal
 class GtpConnection():
 
     def __init__(self, go_engine, board, debug_mode = False):
+        self.hash = {}
+        self.depth = 3
+        self.hash_size = 100000
+        
         """
         Manage a GTP connection for a Go-playing engine
 
@@ -179,9 +185,13 @@ class GtpConnection():
         Reset the game with new boardsize args[0]
         """
         self.reset(int(args[0]))
+     
+       
+        
         self.respond()
 
     def showboard_cmd(self, args):
+        
         self.respond('\n' + self.board2d())
 
     def komi_cmd(self, args):
@@ -234,17 +244,21 @@ class GtpConnection():
         which attempts to compute the winner of the current position, 
         assuming perfect play by both, within the current time limit.
         """
+        
         signal.signal(signal.SIGALRM, self.handler)
         signal.alarm(self._timelimit)
         
         try:
+            self.hash = {}
+            
+            current_depth = 0
 
             color = self.board.current_player
             moves = GoBoardUtil.generate_legal_moves(self.board, color)
             tempboard = self.board.copy()
             for move in moves:
                 tempboard.play_move(move,color)
-                if self.minimax(tempboard,color) == color:
+                if self.minimax(tempboard,color,current_depth+1) == color:
                     move_coord = point_to_coord(move, self.board.size)
                     move_as_string = format_point(move_coord)
                     signal.alarm(0)
@@ -253,12 +267,13 @@ class GtpConnection():
                     print(self.board.current_player, move_as_string)
                     
 
-                    return 
+                    return None
                 tempboard.current_player = color
                 tempboard.board[move] = EMPTY
             signal.alarm(0)
             if return_val == True:
-                return []
+                return None
+
             self.respond(GoBoardUtil.opponent(self.board.current_player))
             
             """
@@ -274,26 +289,45 @@ class GtpConnection():
         except TimeoutError:
             self.respond("unknown")
             signal.alarm(0)
-            return
+            return None
 
         signal.alarm(0)
-        return
+        return None
 
         
 
 
-    def minimax(self,Tboard,player):
+    def minimax(self,Tboard,player,current_depth):
+
+
+        if current_depth == 3:
+
+            temp= self.hash.get(str(Tboard.board[Tboard.size+2:((Tboard.size+2)*2)] ) )
+            if temp != None:
+                return temp
+            
+            
+        
+        
+
         current_player = Tboard.current_player
         moves = GoBoardUtil.generate_legal_moves(Tboard, current_player)
         # current player looses
         if len(moves) ==0: 
+            
+            if(len(self.hash) < self.hash_size):
+                
+                self.hash[str(Tboard.board[Tboard.size+2: ((Tboard.size+2)*2)])]= 3-current_player
+
+    
             return 3-current_player
+
         if player == current_player:
             for move in moves:
                 
                 Tboard.board[move] = current_player
                 Tboard.current_player = 3 - current_player
-                if self.minimax(Tboard,player) == player:
+                if self.minimax(Tboard,player,current_depth+1) == player:
                     Tboard.board[move] = EMPTY
                     Tboard.current_player = player
                     return player
@@ -307,7 +341,7 @@ class GtpConnection():
                 Tboard.current_player = 3 - current_player
                 
                 # Tboard.play_move(move,current_player)
-                if self.minimax(Tboard,player) != player:
+                if self.minimax(Tboard,player,current_depth+1) != player:
                     Tboard.board[move] = EMPTY
                     Tboard.current_player = player
                     return 3-player
@@ -352,22 +386,38 @@ class GtpConnection():
         """
         board_color = args[0].lower()
         color = color_to_int(board_color)
-        move = self.go_engine.get_move(self.board, color)
-        move_coord = point_to_coord(move, self.board.size)
-        move_as_string = format_point(move_coord)
+        
+
+        # # print(move)
+       
+      
 
         ans=self.solve(True)
 
-        if ans != []:
-            self.board.play_move(move, color)
+        
+
+        if ans != None:
+            self.board.play_move(ans, color)
+            move_coord = point_to_coord(ans, self.board.size)
+            move_as_string = format_point(move_coord)
             self.respond(move_as_string)
             return
-
-        if self.board.is_legal(move, color):
-            self.board.play_move(move, color)
-            self.respond(move_as_string)
         else:
-            self.respond("resign")
+            move = self.go_engine.get_move(self.board,color)
+            move_coord = point_to_coord(move, self.board.size)
+            move_as_string = format_point(move_coord)
+
+            if move == None:
+                print("resign")
+            else:
+                self.board.play_move(move,color)
+                self.respond(move_as_string)
+
+        # if self.board.is_legal(move, color):
+        #     self.board.play_move(move, color)
+        #     self.respond(move_as_string)
+        # else:
+        #     self.respond("resign")
 
     def gogui_rules_game_id_cmd(self, args):
         self.respond("NoGo")

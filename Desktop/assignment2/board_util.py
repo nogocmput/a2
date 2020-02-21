@@ -90,6 +90,8 @@ def coord_to_point(row, col, boardsize):
     return NS * row + col
 
 class GoBoardUtil(object):
+
+    
     
     @staticmethod
     def generate_legal_moves(board, color):
