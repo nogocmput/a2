@@ -8,6 +8,9 @@ at the University of Edinburgh.
 
 """
 
+
+import cProfile
+
 import traceback
 from sys import stdin, stdout, stderr
 from board_util import GoBoardUtil, BLACK, WHITE, EMPTY, BORDER, PASS, \
@@ -87,6 +90,17 @@ class GtpConnection():
         Start a GTP connection. 
         This function continuously monitors standard input for commands.
         """
+
+        pr = cProfile.Profile()
+        pr.enable()
+        
+        self._timelimit = 50
+        self.board.board[21] = 1
+        self.board.board[11] = 2
+        self.solve()
+        pr.disable()
+        pr.print_stats()
+
         line = stdin.readline()
         while line:
             self.get_cmd(line)
@@ -184,10 +198,9 @@ class GtpConnection():
         """
         Reset the game with new boardsize args[0]
         """
-        self.reset(int(args[0]))
-     
-       
+
         
+        self.reset(int(args[0]))
         self.respond()
 
     def showboard_cmd(self, args):
@@ -262,6 +275,7 @@ class GtpConnection():
                     move_coord = point_to_coord(move, self.board.size)
                     move_as_string = format_point(move_coord)
                     signal.alarm(0)
+
                     if return_val ==True:
                         return (move)
                     print(self.board.current_player, move_as_string)
@@ -298,41 +312,39 @@ class GtpConnection():
 
 
     def minimax(self,Tboard,player,current_depth):
+        
 
-
-        if current_depth == 3:
-
-            temp= self.hash.get(str(Tboard.board[Tboard.size+2:((Tboard.size+2)*2)] ) )
+        if current_depth <= 10:
+            temp = self.hash.get(str(Tboard.board))
             if temp != None:
                 return temp
-            
-            
-        
-        
+
 
         current_player = Tboard.current_player
         moves = GoBoardUtil.generate_legal_moves(Tboard, current_player)
         # current player looses
         if len(moves) ==0: 
-            
-            if(len(self.hash) < self.hash_size):
-                
-                self.hash[str(Tboard.board[Tboard.size+2: ((Tboard.size+2)*2)])]= 3-current_player
-
-    
             return 3-current_player
+        
+
 
         if player == current_player:
             for move in moves:
-                
                 Tboard.board[move] = current_player
                 Tboard.current_player = 3 - current_player
                 if self.minimax(Tboard,player,current_depth+1) == player:
                     Tboard.board[move] = EMPTY
                     Tboard.current_player = player
+                    if current_depth <= 10:
+                        self.hash[str(Tboard.board)] = player
+                        
+
                     return player
                 Tboard.board[move] = EMPTY
                 Tboard.current_player = player
+
+            if current_depth <= 10:
+                self.hash[str(Tboard.board)] = 3-player
             return 3-player
         else:
             for move in moves:
@@ -340,13 +352,20 @@ class GtpConnection():
                 Tboard.board[move] = current_player
                 Tboard.current_player = 3 - current_player
                 
-                # Tboard.play_move(move,current_player)
+          
                 if self.minimax(Tboard,player,current_depth+1) != player:
                     Tboard.board[move] = EMPTY
                     Tboard.current_player = player
+
+                    if current_depth <= 10:
+                        self.hash[str(Tboard.board)] = 3-player
+
                     return 3-player
                 Tboard.board[move] = EMPTY
                 Tboard.current_player = player
+
+            if current_depth <= 10:
+                        self.hash[str(Tboard.board)] = player
             return player
 
     def play_cmd(self, args):
@@ -391,11 +410,13 @@ class GtpConnection():
         # # print(move)
        
       
-
-        ans=self.solve(True)
+        
+      
+        ans= self.solve(True)
+       
 
         
-
+        
         if ans != None:
             self.board.play_move(ans, color)
             move_coord = point_to_coord(ans, self.board.size)
