@@ -9,7 +9,7 @@ at the University of Edinburgh.
 """
 
 
-import cProfile
+import time
 
 import traceback
 from sys import stdin, stdout, stderr
@@ -91,15 +91,6 @@ class GtpConnection():
         This function continuously monitors standard input for commands.
         """
 
-        pr = cProfile.Profile()
-        pr.enable()
-        
-        self._timelimit = 50
-        self.board.board[21] = 1
-        self.board.board[11] = 2
-        self.solve()
-        pr.disable()
-        pr.print_stats()
 
         line = stdin.readline()
         while line:
@@ -315,7 +306,7 @@ class GtpConnection():
         
 
         if current_depth <= 10:
-            temp = self.hash.get(str(Tboard.board))
+            temp = self.hash.get(np.array2string(Tboard.board))
             if temp != None:
                 return temp
 
@@ -336,7 +327,8 @@ class GtpConnection():
                     Tboard.board[move] = EMPTY
                     Tboard.current_player = player
                     if current_depth <= 10:
-                        self.hash[str(Tboard.board)] = player
+                        # self.hash[str(Tboard.board)] = player
+                        self.hash[np.array2string(Tboard.board)] = player
                         
 
                     return player
@@ -344,7 +336,8 @@ class GtpConnection():
                 Tboard.current_player = player
 
             if current_depth <= 10:
-                self.hash[str(Tboard.board)] = 3-player
+                # self.hash[str(Tboard.board)] = 3-player
+                self.hash[np.array2string(Tboard.board)] = 3-player
             return 3-player
         else:
             for move in moves:
@@ -358,14 +351,14 @@ class GtpConnection():
                     Tboard.current_player = player
 
                     if current_depth <= 10:
-                        self.hash[str(Tboard.board)] = 3-player
+                        self.hash[np.array2string(Tboard.board)] = 3-player
 
                     return 3-player
                 Tboard.board[move] = EMPTY
                 Tboard.current_player = player
 
             if current_depth <= 10:
-                        self.hash[str(Tboard.board)] = player
+                        self.hash[np.array2string(Tboard.board)] = player
             return player
 
     def play_cmd(self, args):
@@ -411,8 +404,11 @@ class GtpConnection():
        
       
         
-      
+        t1 = time.time()
         ans= self.solve(True)
+        t2 = time.time()
+
+        print(t2-t1)
        
 
         

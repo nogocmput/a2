@@ -208,7 +208,8 @@ class SimpleGoBoard(object):
         lib = self._get_liberty(block)
         if lib != None:
             
-            assert self.get_color(lib) == EMPTY
+            assert self.board[lib] == EMPTY
+            # assert self.get_color(lib) == EMPTY
             for stone in where1d(block):
                 self.liberty_of[stone] = lib
             return True
@@ -222,7 +223,8 @@ class SimpleGoBoard(object):
         """
         marker = np.full(self.maxpoint, False, dtype = bool)
         pointstack = [stone]
-        color = self.get_color(stone)
+        # color = self.get_color(stone)
+        color = self.board[stone]
         assert is_black_white(color)
         marker[stone] = True
         while pointstack:
@@ -236,7 +238,7 @@ class SimpleGoBoard(object):
 
     def _fast_liberty_check(self, nb_point):
         lib = self.liberty_of[nb_point]
-        if lib != NULLPOINT and self.get_color(lib) == EMPTY:
+        if lib != NULLPOINT and self.board[lib] == EMPTY:
             return True # quick exit, block has a liberty  
         if self._stone_has_liberty(nb_point):
             return True # quick exit, no need to look at whole block
@@ -310,14 +312,14 @@ class SimpleGoBoard(object):
         """ List of neighbors of point of given color """
         nbc = []
         for nb in self.neighbors[point]:
-            if self.get_color(nb) == color:
+            if self.board[nb] == color:
                 nbc.append(nb)
         return nbc
         
     def find_neighbor_of_color(self, point, color):
         """ Return one neighbor of point of given color, or None """
         for nb in self.neighbors[point]:
-            if self.get_color(nb) == color:
+            if self.board[nb] == color:
                 return nb
         return None
         
