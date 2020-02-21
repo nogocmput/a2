@@ -40,10 +40,10 @@ class SimpleGoBoard(object):
             self.board[point] = EMPTY
             return False
 
-        neighbors = self.neighbors[point]
+        # neighbors = self.neighbors[point]
 
         #check capture
-        for nb in neighbors:
+        for nb in self.neighbors[point]:
             if self.board[nb] == opp_color:
                 block = self._block_of(nb)
                 if not self._has_liberty(block):
@@ -58,18 +58,6 @@ class SimpleGoBoard(object):
         return True
 
 
-        
-
-
-        # board_copy = self.copy()
-        # # Try to play the move on a temporary copy of board
-        # # This prevents the board from being messed up by the move
-        # try:
-        #     legal = board_copy.play_move(point, color)
-        # except:
-        #     return False
-            
-        # return legal
 
     def _detect_captures(self, point, opp_color):
         """
@@ -178,10 +166,16 @@ class SimpleGoBoard(object):
         check whether empty point is surrounded by stones of color.
         """
         for nb in self.neighbors[point]:
-            nb_color = self.board[nb]
-            if nb_color != color:
+             
+            if self.board[nb] != color:
                 return False
         return True
+
+        # for nb in self.neighbors[point]:
+        #     nb_color = self.board[nb]
+        #     if nb_color != color:
+        #         return False
+        # return True
 
     def _stone_has_liberty(self, stone):
         lib = self.find_neighbor_of_color(stone, EMPTY)
@@ -352,90 +346,4 @@ class SimpleGoBoard(object):
         row, col = divmod(point, self.NS)
         return row, col
 
-    # def is_legal_gomoku(self, point, color):
-    #     """
-    #         Check whether it is legal for color to play on point, for the game of gomoku
-    #         """
-    #     return self.board[point] == EMPTY
-    
-    # def play_move_gomoku(self, point, color):
-    #     """
-    #         Play a move of color on point, for the game of gomoku
-    #         Returns boolean: whether move was legal
-    #         """
-    #     assert is_black_white(color)
-    #     assert point != PASS
-    #     if self.board[point] != EMPTY:
-    #         return False
-    #     self.board[point] = color
-    #     self.current_player = GoBoardUtil.opponent(color)
-    #     return True
-        
-    # def _point_direction_check_connect_gomoko(self, point, shift):
-    #     """
-    #     Check if the point has connect5 condition in a direction
-    #     for the game of Gomoko.
-    #     """
-    #     color = self.board[point]
-    #     count = 1
-    #     d = shift
-    #     p = point
-    #     while True:
-    #         p = p + d
-    #         if self.board[p] == color:
-    #             count = count + 1
-    #             if count == 5:
-    #                 break
-    #         else:
-    #             break
-    #     d = -d
-    #     p = point
-    #     while True:
-    #         p = p + d
-    #         if self.board[p] == color:
-    #             count = count + 1
-    #             if count == 5:
-    #                 break
-    #         else:
-    #             break
-    #     assert count <= 5
-    #     return count == 5
-    
-    # def point_check_game_end_gomoku(self, point):
-    #     """
-    #         Check if the point causes the game end for the game of Gomoko.
-    #         """
-    #     # check horizontal
-    #     if self._point_direction_check_connect_gomoko(point, 1):
-    #         return True
-        
-    #     # check vertical
-    #     if self._point_direction_check_connect_gomoko(point, self.NS):
-    #         return True
-        
-    #     # check y=x
-    #     if self._point_direction_check_connect_gomoko(point, self.NS + 1):
-    #         return True
-        
-    #     # check y=-x
-    #     if self._point_direction_check_connect_gomoko(point, self.NS - 1):
-    #         return True
-        
-    #     return False
-    
-    # def check_game_end_gomoku(self):
-    #     """
-    #         Check if the game ends for the game of Gomoku.
-    #         """
-    #     white_points = where1d(self.board == WHITE)
-    #     black_points = where1d(self.board == BLACK)
-        
-    #     for point in white_points:
-    #         if self.point_check_game_end_gomoku(point):
-    #             return True, WHITE
-    
-    #     for point in black_points:
-    #         if self.point_check_game_end_gomoku(point):
-    #             return True, BLACK
 
-    #     return False, None

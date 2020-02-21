@@ -23,7 +23,7 @@ class GtpConnection():
 
     def __init__(self, go_engine, board, debug_mode = False):
         self.hash = {}
-        self.depth = 3
+       
         self.hash_size = 100000
         
         """
@@ -314,7 +314,7 @@ class GtpConnection():
         current_player = Tboard.current_player
         moves = GoBoardUtil.generate_legal_moves(Tboard, current_player)
         # current player looses
-        if len(moves) ==0: 
+        if moves == []: 
             return 3-current_player
         
 
@@ -358,7 +358,7 @@ class GtpConnection():
                 Tboard.current_player = player
 
             if current_depth <= 10:
-                        self.hash[np.array2string(Tboard.board)] = player
+                self.hash[np.array2string(Tboard.board)] = player
             return player
 
     def play_cmd(self, args):
