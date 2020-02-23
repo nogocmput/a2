@@ -5,12 +5,7 @@ Module for playing games of Go using GoTextProtocol
 Parts of this code were originally based on the gtp module 
 in the Deep-Go project by Isaac Henrion and Amos Storkey 
 at the University of Edinburgh.
-
 """
-
-
-import time
-
 import traceback
 from sys import stdin, stdout, stderr
 from board_util import GoBoardUtil, BLACK, WHITE, EMPTY, BORDER, PASS, \
@@ -22,10 +17,6 @@ import signal
 class GtpConnection():
 
     def __init__(self, go_engine, board, debug_mode = False):
-        self.hash = {}
-       
-        self.hash_size = 100000
-        
         """
         Manage a GTP connection for a Go-playing engine
 
@@ -90,8 +81,6 @@ class GtpConnection():
         Start a GTP connection. 
         This function continuously monitors standard input for commands.
         """
-
-
         line = stdin.readline()
         while line:
             self.get_cmd(line)
@@ -189,13 +178,10 @@ class GtpConnection():
         """
         Reset the game with new boardsize args[0]
         """
-
-        
         self.reset(int(args[0]))
         self.respond()
 
     def showboard_cmd(self, args):
-        
         self.respond('\n' + self.board2d())
 
     def komi_cmd(self, args):
@@ -243,123 +229,79 @@ class GtpConnection():
     def handler(self,signum, frame):
         raise TimeoutError
 
-    def solve(self, return_val=False):
+    def solve(self, genmove = False):
         """
         which attempts to compute the winner of the current position, 
         assuming perfect play by both, within the current time limit.
         """
-        
         signal.signal(signal.SIGALRM, self.handler)
         signal.alarm(self._timelimit)
-        
         try:
-            self.hash = {}
-            
-            current_depth = 0
-
             color = self.board.current_player
             moves = GoBoardUtil.generate_legal_moves(self.board, color)
             tempboard = self.board.copy()
             for move in moves:
                 tempboard.play_move(move,color)
-                if self.minimax(tempboard,color,current_depth+1) == color:
+                if self.solveForWin(tempboard,color) == True:
                     move_coord = point_to_coord(move, self.board.size)
                     move_as_string = format_point(move_coord)
+                    if color == 1:
+                        self.respond("b "+move_as_string)
+                    else:
+                        self.respond("w "+move_as_string)
                     signal.alarm(0)
-
-                    if return_val ==True:
-                        return (move)
-                    print(self.board.current_player, move_as_string)
-                    
-
-                    return None
+                    return
                 tempboard.current_player = color
                 tempboard.board[move] = EMPTY
+            if (3 - color) == 1:
+                self.respond("b")
+            else:
+                self.respond("w")
             signal.alarm(0)
-            if return_val == True:
-                return None
-
-            self.respond(GoBoardUtil.opponent(self.board.current_player))
-            
-            """
-            it was white's turn but white loses, so we do not write a move, just write "b" (b wins)
-            call it "one_step_to_win"
-            """
-            # else:
-            #     if self.board.current_player == 1:
-            #         self.respond("w")
-            #     else:
-            #         self.respond("b")
-
+            return
         except TimeoutError:
             self.respond("unknown")
-            signal.alarm(0)
-            return None
-
+            return
+        self.respond("unknown")
         signal.alarm(0)
-        return None
+        return
 
         
+    def minimaxBooleanOR(self,Tboard,player):
+        moves = GoBoardUtil.generate_legal_moves(Tboard, player)
+        if len(moves)==0:
+            return False
+        for move in moves:
+            Tboard.play_move(move,player)
+            isWin = self.minimaxBooleanAND(Tboard,player)
+            Tboard.board[move] = EMPTY
+            Tboard.current_player = player
+            if isWin:
+                return True
+        return False
 
+    def minimaxBooleanAND(self,Tboard,player):
+        moves = GoBoardUtil.generate_legal_moves(Tboard, 3-player)
+        if len(moves)==0:
+            return True
+        for move in moves:
+            Tboard.play_move(move,3-player)
+            isLoss = not self.minimaxBooleanOR(Tboard,player)
+            Tboard.board[move] = EMPTY
+            Tboard.current_player = 3-player
+            if isLoss:
+                return False
+        return True    
 
-    def minimax(self,Tboard,player,current_depth):
-        
-
-        if current_depth <= 10:
-            temp = self.hash.get(np.array2string(Tboard.board))
-            if temp != None:
-                return temp
-
-
+    def solveForWin(self,Tboard,player): 
+        win = False
         current_player = Tboard.current_player
-        moves = GoBoardUtil.generate_legal_moves(Tboard, current_player)
-        # current player looses
-        if moves == []: 
-            return 3-current_player
-        
-
-
         if player == current_player:
-            for move in moves:
-                Tboard.board[move] = current_player
-                Tboard.current_player = 3 - current_player
-                if self.minimax(Tboard,player,current_depth+1) == player:
-                    Tboard.board[move] = EMPTY
-                    Tboard.current_player = player
-                    if current_depth <= 10:
-                        # self.hash[str(Tboard.board)] = player
-                        self.hash[np.array2string(Tboard.board)] = player
-                        
-
-                    return player
-                Tboard.board[move] = EMPTY
-                Tboard.current_player = player
-
-            if current_depth <= 10:
-                # self.hash[str(Tboard.board)] = 3-player
-                self.hash[np.array2string(Tboard.board)] = 3-player
-            return 3-player
+            win = self.minimaxBooleanOR(Tboard,player)
         else:
-            for move in moves:
+            win = self.minimaxBooleanAND(Tboard,player)
+        return win
 
-                Tboard.board[move] = current_player
-                Tboard.current_player = 3 - current_player
-                
-          
-                if self.minimax(Tboard,player,current_depth+1) != player:
-                    Tboard.board[move] = EMPTY
-                    Tboard.current_player = player
-
-                    if current_depth <= 10:
-                        self.hash[np.array2string(Tboard.board)] = 3-player
-
-                    return 3-player
-                Tboard.board[move] = EMPTY
-                Tboard.current_player = player
-
-            if current_depth <= 10:
-                self.hash[np.array2string(Tboard.board)] = player
-            return player
 
     def play_cmd(self, args):
         """
@@ -398,43 +340,14 @@ class GtpConnection():
         """
         board_color = args[0].lower()
         color = color_to_int(board_color)
-        
-
-        # # print(move)
-       
-      
-        
-        t1 = time.time()
-        ans= self.solve(True)
-        t2 = time.time()
-
-        print(t2-t1)
-       
-
-        
-        
-        if ans != None:
-            self.board.play_move(ans, color)
-            move_coord = point_to_coord(ans, self.board.size)
-            move_as_string = format_point(move_coord)
+        move = self.go_engine.get_move(self.board, color)
+        move_coord = point_to_coord(move, self.board.size)
+        move_as_string = format_point(move_coord)
+        if self.board.is_legal(move, color):
+            self.board.play_move(move, color)
             self.respond(move_as_string)
-            return
         else:
-            move = self.go_engine.get_move(self.board,color)
-            move_coord = point_to_coord(move, self.board.size)
-            move_as_string = format_point(move_coord)
-
-            if move == None:
-                print("resign")
-            else:
-                self.board.play_move(move,color)
-                self.respond(move_as_string)
-
-        # if self.board.is_legal(move, color):
-        #     self.board.play_move(move, color)
-        #     self.respond(move_as_string)
-        # else:
-        #     self.respond("resign")
+            self.respond("resign")
 
     def gogui_rules_game_id_cmd(self, args):
         self.respond("NoGo")
@@ -531,8 +444,8 @@ def format_point(move):
     """
     Return move coordinates as a string such as 'a1', or 'pass'.
     """
-    column_letters = "ABCDEFGHJKLMNOPQRSTUVWXYZ"
-    #column_letters = "abcdefghjklmnopqrstuvwxyz"
+    #column_letters = "ABCDEFGHJKLMNOPQRSTUVWXYZ"
+    column_letters = "abcdefghjklmnopqrstuvwxyz"
     if move == PASS:
         return "pass"
     row, col = move
