@@ -11,6 +11,7 @@ at the University of Edinburgh.
 
 import time
 
+
 import traceback
 from sys import stdin, stdout, stderr
 from board_util import GoBoardUtil, BLACK, WHITE, EMPTY, BORDER, PASS, \
@@ -186,11 +187,7 @@ class GtpConnection():
         self.respond()
 
     def boardsize_cmd(self, args):
-        """
-        Reset the game with new boardsize args[0]
-        """
 
-        
         self.reset(int(args[0]))
         self.respond()
 
@@ -199,29 +196,23 @@ class GtpConnection():
         self.respond('\n' + self.board2d())
 
     def komi_cmd(self, args):
-        """
-        Set the engine's komi to args[0]
-        """
+
         self.go_engine.komi = float(args[0])
         self.respond()
 
     def known_command_cmd(self, args):
-        """
-        Check if command args[0] is known to the GTP interface
-        """
+
         if args[0] in self.commands:
             self.respond("true")
         else:
             self.respond("false")
 
     def list_commands_cmd(self, args):
-        """ list all supported GTP commands """
+    
         self.respond(' '.join(list(self.commands.keys())))
 
     def legal_moves_cmd(self, args):
-        """
-        List legal moves for color args[0] in {'b','w'}
-        """
+
         board_color = args[0].lower()
         color = color_to_int(board_color)
         moves = GoBoardUtil.generate_legal_moves(self.board, color)
@@ -233,9 +224,7 @@ class GtpConnection():
         self.respond(sorted_moves)
 
     def timelimit(self, args):
-        """
-        the argument seconds is an integer in the range 1 <= seconds <= 100.
-        """
+
         self._timelimit = int(args[0])
         self.respond()
         return
@@ -244,14 +233,7 @@ class GtpConnection():
         raise TimeoutError
 
     def solve(self, return_val=False):
-        """
-        which attempts to compute the winner of the current position, 
-        assuming perfect play by both, within the current time limit.
-        """
-        
-        signal.signal(signal.SIGALRM, self.handler)
-        signal.alarm(self._timelimit)
-        
+
         try:
             self.hash = {}
             
@@ -259,37 +241,50 @@ class GtpConnection():
 
             color = self.board.current_player
             moves = GoBoardUtil.generate_legal_moves(self.board, color)
-            tempboard = self.board.copy()
-            for move in moves:
-                tempboard.play_move(move,color)
-                if self.minimax(tempboard,color,current_depth+1) == color:
-                    move_coord = point_to_coord(move, self.board.size)
-                    move_as_string = format_point(move_coord)
-                    signal.alarm(0)
 
+         
+            tempboard = self.board.copy()
+            tempboard.current_player = 3 - color
+             t1 = time.time()
+            signal.signal(signal.SIGALRM, self.handler)
+            signal.alarm(self._timelimit)
+           
+            for move in moves:
+                tempboard.board[move] = color
+                
+                # tempboard.play_move(move,color)
+                # if self.minimax(tempboard,color,current_depth+1) == color:
+
+                if not self.negamax(tempboard,1):
+                    signal.alarm(0)
+                    print(time.time()-t1)
+
+                    move_coord = point_to_coord(move, tempboard.size)
+                    move_as_string = format_point(move_coord)
+                    
+                   
                     if return_val ==True:
                         return (move)
-                    print(self.board.current_player, move_as_string)
                     
+                    if self.board.current_player == 1:
+                        self.respond("b "+ move_as_string.lower())
+                    else:
+                        self.respond("w "+ move_as_string.lower() )
+
+                 
 
                     return None
-                tempboard.current_player = color
+                
                 tempboard.board[move] = EMPTY
             signal.alarm(0)
             if return_val == True:
                 return None
 
-            self.respond(GoBoardUtil.opponent(self.board.current_player))
-            
-            """
-            it was white's turn but white loses, so we do not write a move, just write "b" (b wins)
-            call it "one_step_to_win"
-            """
-            # else:
-            #     if self.board.current_player == 1:
-            #         self.respond("w")
-            #     else:
-            #         self.respond("b")
+            if self.board.current_player == 1:
+                self.respond("w")
+            else:
+                self.respond("b")
+
 
         except TimeoutError:
             self.respond("unknown")
@@ -300,7 +295,45 @@ class GtpConnection():
         return None
 
         
+    def negamax(self,Tboard,depth):
 
+       
+            
+        current_player = Tboard.current_player
+        moves = GoBoardUtil.generate_legal_moves(Tboard, current_player)
+
+        if moves == []:
+            return False
+
+        Tboard.current_player = 3 - current_player 
+        for move in moves:
+            Tboard.board[move] = current_player
+
+            temp = self.hash.get(Tboard.board.tostring())
+            if temp != None:
+
+                Tboard.board[move] = 0
+                if temp == current_player:
+                    Tboard.current_player = current_player
+                    return True
+                else:
+                    continue
+                
+            if not self.negamax(Tboard,depth+1):
+        
+                Tboard.current_player = current_player
+
+                if depth <= 10:
+                    self.hash[Tboard.board.tostring()] = current_player
+                Tboard.board[move] = 0
+
+                return True
+            if depth <= 10:
+                self.hash[Tboard.board.tostring()] = 3-current_player
+            Tboard.board[move] =  0
+      
+        Tboard.current_player = current_player
+        return False
 
     def minimax(self,Tboard,player,current_depth):
         
@@ -398,17 +431,12 @@ class GtpConnection():
         """
         board_color = args[0].lower()
         color = color_to_int(board_color)
+     
         
-
-        # # print(move)
-       
-      
         
-        t1 = time.time()
         ans= self.solve(True)
-        t2 = time.time()
+     
 
-        print(t2-t1)
        
 
         
@@ -425,7 +453,7 @@ class GtpConnection():
             move_as_string = format_point(move_coord)
 
             if move == None:
-                print("resign")
+                self.respond("resign")
             else:
                 self.board.play_move(move,color)
                 self.respond(move_as_string)

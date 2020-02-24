@@ -43,6 +43,12 @@ class SimpleGoBoard(object):
         # neighbors = self.neighbors[point]
 
         #check capture
+
+        # if self._detect_captures(point, 3-point):
+        #     self.board[point] = EMPTY
+        #     return False
+        # self.board[point] = EMPTY
+
         for nb in self.neighbors[point]:
             if self.board[nb] == opp_color:
                 block = self._block_of(nb)
@@ -150,6 +156,7 @@ class SimpleGoBoard(object):
         """
         if not self._is_surrounded(point, color):
             return False
+            
         # Eye-like shape. Check diagonals to detect false eye
         opp_color = GoBoardUtil.opponent(color)
         false_count = 0
@@ -199,14 +206,18 @@ class SimpleGoBoard(object):
         Also updates the liberty_of array.
         block is a numpy boolean array
         """
-        lib = self._get_liberty(block)
-        if lib != None:
+        # lib = self._get_liberty(block)
+        # if lib != None:
             
-            assert self.board[lib] == EMPTY
-            # assert self.get_color(lib) == EMPTY
-            for stone in where1d(block):
-                self.liberty_of[stone] = lib
-            return True
+        #     assert self.board[lib] == EMPTY
+        #     # assert self.get_color(lib) == EMPTY
+        #     for stone in where1d(block):
+        #         self.liberty_of[stone] = lib
+        #     return True if self.find_neighbor_of_color(stone, EMPTY) != None:
+        # return False
+        for stone in where1d(block):
+            if self.find_neighbor_of_color(stone,0):
+                return True
         return False
 
     def _block_of(self, stone):
@@ -309,10 +320,13 @@ class SimpleGoBoard(object):
             if self.board[nb] == color:
                 nbc.append(nb)
         return nbc
+    
+    
         
     def find_neighbor_of_color(self, point, color):
         """ Return one neighbor of point of given color, or None """
         for nb in self.neighbors[point]:
+            
             if self.board[nb] == color:
                 return nb
         return None
