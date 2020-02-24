@@ -106,7 +106,7 @@ class GoBoardUtil(object):
         color : {'b','w'}
             the color to generate the move for.
         """
-        moves = board.get_empty_points()
+        moves = where1d(board.board == 0)
         legal_moves = []
         for move in moves:
             if board.is_legal(move, color):

@@ -12,6 +12,7 @@ at the University of Edinburgh.
 
 
 
+
 import traceback
 from sys import stdin, stdout, stderr
 from board_util import GoBoardUtil, BLACK, WHITE, EMPTY, BORDER, PASS, \
@@ -245,10 +246,10 @@ class GtpConnection():
          
             tempboard = self.board.copy()
             tempboard.current_player = 3 - color
-           
+            
             signal.signal(signal.SIGALRM, self.handler)
             signal.alarm(self._timelimit)
-           
+            
             for move in moves:
                 tempboard.board[move] = color
                 
@@ -300,7 +301,18 @@ class GtpConnection():
        
             
         current_player = Tboard.current_player
-        moves = GoBoardUtil.generate_legal_moves(Tboard, current_player)
+        # moves = GoBoardUtil.generate_legal_moves(Tboard, current_player)
+
+        
+
+        moves = []
+        temp = np.where(Tboard.board == 0)[0]
+        
+        for temp1 in temp:
+            if Tboard.is_legal(temp1, current_player):
+                moves.append(temp1)
+
+
 
         if moves == []:
             return False
@@ -309,7 +321,7 @@ class GtpConnection():
         for move in moves:
             Tboard.board[move] = current_player
 
-            if depth <= 10:
+            if depth <= 12:
                 temp = self.hash.get(Tboard.board.tostring())
                 if temp != None:
 
@@ -324,12 +336,12 @@ class GtpConnection():
         
                 Tboard.current_player = current_player
 
-                if depth <= 10:
+                if depth <= 12:
                     self.hash[Tboard.board.tostring()] = current_player
                 Tboard.board[move] = 0
 
                 return True
-            if depth <= 10:
+            if depth <= 12:
                 self.hash[Tboard.board.tostring()] = 3-current_player
             Tboard.board[move] =  0
       

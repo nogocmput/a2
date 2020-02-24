@@ -33,8 +33,7 @@ class SimpleGoBoard(object):
         opp_color = 3-color
 
 
-        # if self._is_surrounded(point, opp_color):
-        #     return False
+      
 
         if self._is_surrounded(point,opp_color):
             return False
@@ -44,7 +43,7 @@ class SimpleGoBoard(object):
 
         
         block = self._block_of(point)
-        if not self._has_liberty(block): # undo suicide move
+        if not self._has_liberty(block):
             self.board[point] = EMPTY
             return False
 
