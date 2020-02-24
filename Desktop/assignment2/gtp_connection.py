@@ -9,7 +9,7 @@ at the University of Edinburgh.
 """
 
 
-import time
+
 
 
 import traceback
@@ -245,7 +245,7 @@ class GtpConnection():
          
             tempboard = self.board.copy()
             tempboard.current_player = 3 - color
-             t1 = time.time()
+           
             signal.signal(signal.SIGALRM, self.handler)
             signal.alarm(self._timelimit)
            
@@ -257,7 +257,7 @@ class GtpConnection():
 
                 if not self.negamax(tempboard,1):
                     signal.alarm(0)
-                    print(time.time()-t1)
+                   
 
                     move_coord = point_to_coord(move, tempboard.size)
                     move_as_string = format_point(move_coord)
@@ -309,15 +309,16 @@ class GtpConnection():
         for move in moves:
             Tboard.board[move] = current_player
 
-            temp = self.hash.get(Tboard.board.tostring())
-            if temp != None:
+            if depth <= 10:
+                temp = self.hash.get(Tboard.board.tostring())
+                if temp != None:
 
-                Tboard.board[move] = 0
-                if temp == current_player:
-                    Tboard.current_player = current_player
-                    return True
-                else:
-                    continue
+                    Tboard.board[move] = 0
+                    if temp == current_player:
+                        Tboard.current_player = current_player
+                        return True
+                    else:
+                        continue
                 
             if not self.negamax(Tboard,depth+1):
         
@@ -335,64 +336,7 @@ class GtpConnection():
         Tboard.current_player = current_player
         return False
 
-    def minimax(self,Tboard,player,current_depth):
-        
-
-        if current_depth <= 10:
-            temp = self.hash.get(np.array2string(Tboard.board))
-            if temp != None:
-                return temp
-
-
-        current_player = Tboard.current_player
-        moves = GoBoardUtil.generate_legal_moves(Tboard, current_player)
-        # current player looses
-        if moves == []: 
-            return 3-current_player
-        
-
-
-        if player == current_player:
-            for move in moves:
-                Tboard.board[move] = current_player
-                Tboard.current_player = 3 - current_player
-                if self.minimax(Tboard,player,current_depth+1) == player:
-                    Tboard.board[move] = EMPTY
-                    Tboard.current_player = player
-                    if current_depth <= 10:
-                        # self.hash[str(Tboard.board)] = player
-                        self.hash[np.array2string(Tboard.board)] = player
-                        
-
-                    return player
-                Tboard.board[move] = EMPTY
-                Tboard.current_player = player
-
-            if current_depth <= 10:
-                # self.hash[str(Tboard.board)] = 3-player
-                self.hash[np.array2string(Tboard.board)] = 3-player
-            return 3-player
-        else:
-            for move in moves:
-
-                Tboard.board[move] = current_player
-                Tboard.current_player = 3 - current_player
-                
-          
-                if self.minimax(Tboard,player,current_depth+1) != player:
-                    Tboard.board[move] = EMPTY
-                    Tboard.current_player = player
-
-                    if current_depth <= 10:
-                        self.hash[np.array2string(Tboard.board)] = 3-player
-
-                    return 3-player
-                Tboard.board[move] = EMPTY
-                Tboard.current_player = player
-
-            if current_depth <= 10:
-                self.hash[np.array2string(Tboard.board)] = player
-            return player
+   
 
     def play_cmd(self, args):
         """
@@ -445,24 +389,22 @@ class GtpConnection():
             self.board.play_move(ans, color)
             move_coord = point_to_coord(ans, self.board.size)
             move_as_string = format_point(move_coord)
-            self.respond(move_as_string)
+            self.respond(move_as_string.lower())
             return
         else:
-            move = self.go_engine.get_move(self.board,color)
-            move_coord = point_to_coord(move, self.board.size)
+
+
+            move = GoBoardUtil.generate_legal_moves(self.board,color)
+            if move == []:
+                self.respond("resign")
+                return
+            move_coord = point_to_coord(move[0], self.board.size)
             move_as_string = format_point(move_coord)
 
-            if move == None:
-                self.respond("resign")
-            else:
-                self.board.play_move(move,color)
-                self.respond(move_as_string)
+            
+            self.board.play_move(move[0],color)
+            self.respond(move_as_string.lower())
 
-        # if self.board.is_legal(move, color):
-        #     self.board.play_move(move, color)
-        #     self.respond(move_as_string)
-        # else:
-        #     self.respond("resign")
 
     def gogui_rules_game_id_cmd(self, args):
         self.respond("NoGo")
